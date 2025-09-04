@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import axios from 'axios';
+import Sidebar from './Sidebar';
 
 const initialContent = 'This is a sample document for the IntelliPaper demo. Highlight text and ask the AI for help.';
 
 export default function App() {
-  const [query, setQuery] = useState('');
+  const [userQuery, setUserQuery] = useState('');
   const [response, setResponse] = useState(null);
   const [selection, setSelection] = useState({ from: 0, to: 0, text: '' });
 
@@ -21,12 +22,12 @@ export default function App() {
   });
 
   const submitQuery = async () => {
-    if (!selection.text || !query.trim()) return;
+    if (!selection.text || !userQuery.trim()) return;
     try {
       const res = await axios.post('http://localhost:3001/api/analyze', {
-        documentId: 1,
+        documentText: editor.getText(),
         highlightedText: selection.text,
-        query
+        userQuery
       });
       setResponse(res.data);
     } catch (e) {
@@ -48,25 +49,14 @@ export default function App() {
       <div style={{ flex: 1, padding: '1rem' }}>
         <EditorContent editor={editor} />
         <textarea
-          value={query}
-          onChange={e => setQuery(e.target.value)}
+          value={userQuery}
+          onChange={e => setUserQuery(e.target.value)}
           placeholder="Ask about the highlight..."
           style={{ width: '100%', marginTop: '1rem' }}
         />
-        <button onClick={submitQuery} style={{ marginTop: '0.5rem' }}>Send</button>
+        <button onClick={submitQuery} style={{ marginTop: '0.5rem' }}>Ask AI</button>
       </div>
-      <div style={{ width: '30%', padding: '1rem', borderLeft: '1px solid #ccc' }}>
-        {response ? (
-          <div>
-            <p>{response.response}</p>
-            {response.suggestedEdit && (
-              <button onClick={applyEdit}>Apply Suggestion</button>
-            )}
-          </div>
-        ) : (
-          <p>Select text and ask a question to get started.</p>
-        )}
-      </div>
+      <Sidebar response={response} onApply={applyEdit} />
     </div>
   );
 }
