@@ -1,0 +1,8 @@
+{
+  "name": "intellipaper",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev"
+  }
+}
