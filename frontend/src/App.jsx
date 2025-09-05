@@ -347,6 +347,27 @@ export default function App() {
     }
   };
 
+  const exportDoc = async format => {
+    if (!editor) return;
+    try {
+      const res = await axios.post(
+        'http://localhost:3001/api/export',
+        { format, document: editor.getJSON() },
+        { responseType: 'blob' }
+      );
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `document.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div className="flex h-screen flex-col bg-gray-50">
       <header className="flex items-center justify-between border-b bg-white px-6 py-3">
@@ -354,7 +375,23 @@ export default function App() {
           className="w-full max-w-md bg-transparent text-lg font-semibold text-gray-800 placeholder-gray-400 focus:outline-none"
           placeholder="Untitled Document"
         />
-        <button className="ml-4 rounded px-2 py-1 text-gray-500 hover:text-gray-700">•••</button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => exportDoc('pdf')}
+            className="rounded px-2 py-1 text-gray-500 hover:text-gray-700"
+          >
+            Export PDF
+          </button>
+          <button
+            onClick={() => exportDoc('docx')}
+            className="rounded px-2 py-1 text-gray-500 hover:text-gray-700"
+          >
+            Export DOCX
+          </button>
+          <button className="ml-4 rounded px-2 py-1 text-gray-500 hover:text-gray-700">
+            •••
+          </button>
+        </div>
       </header>
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-1 justify-center overflow-y-auto bg-gray-200">

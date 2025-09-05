@@ -8,6 +8,8 @@ import { fileURLToPath } from 'url';
 import http from 'http';
 import { WebSocketServer } from 'ws';
 import { setupWSConnection } from 'y-websocket/bin/utils';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { Document as DocxDocument, Packer, Paragraph } from 'docx';
 
 dotenv.config();
 
@@ -58,6 +60,59 @@ app.post('/api/layout', (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to process layout hints' });
+  }
+});
+
+function extractText(node) {
+  if (!node) return '';
+  if (node.type === 'text') return node.text || '';
+  if (!node.content) return '';
+  return node.content.map(extractText).join(' ');
+}
+
+app.post('/api/export', async (req, res) => {
+  const { format, document } = req.body || {};
+  if (!document || !format) {
+    return res.status(400).json({ error: 'format and document are required' });
+  }
+
+  const text = extractText(document);
+
+  try {
+    if (format === 'pdf') {
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage();
+      const { height } = page.getSize();
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const fontSize = 12;
+      const lines = text.split(/\n/);
+      let y = height - 50;
+      lines.forEach(line => {
+        page.drawText(line, { x: 50, y, size: fontSize, font });
+        y -= fontSize + 4;
+      });
+      const pdfBytes = await pdfDoc.save();
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=document.pdf');
+      return res.send(Buffer.from(pdfBytes));
+    } else if (format === 'docx') {
+      const paragraphs = text
+        .split(/\n/)
+        .map(line => new Paragraph(line));
+      const doc = new DocxDocument({ sections: [{ children: paragraphs }] });
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
+      res.setHeader('Content-Disposition', 'attachment; filename=document.docx');
+      return res.send(buffer);
+    } else {
+      return res.status(400).json({ error: 'Unsupported format' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to export document' });
   }
 });
 
