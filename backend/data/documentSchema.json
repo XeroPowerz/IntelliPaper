@@ -3,7 +3,6 @@
   "content": [
     {
       "type": "paragraph",
-      "attrs": { "textAlign": "left" },
       "content": [
         {
           "type": "text",
