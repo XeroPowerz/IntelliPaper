@@ -387,15 +387,19 @@ export default function App() {
         <button className="ml-4 rounded px-2 py-1 text-gray-500 hover:text-gray-700">•••</button>
       </header>
       <div className="flex flex-1 overflow-hidden">
-        <div className="relative flex-1 overflow-y-auto bg-gray-200">
+        <div className="flex flex-1 justify-center overflow-y-auto bg-gray-200">
           <div
-            className="relative mx-auto py-8"
-            style={{ height: pageCount * (pageHeight + pageGap) }}
+            className="relative mx-auto"
+            style={{
+              paddingTop: pageGap,
+              paddingBottom: pageGap,
+              height: pageCount * pageHeight + (pageCount - 1) * pageGap,
+            }}
           >
             {Array.from({ length: pageCount }).map((_, i) => (
               <div
                 key={i}
-                className={`pointer-events-none absolute left-1/2 -translate-x-1/2 w-[816px] rounded-sm bg-white shadow-md ${
+                className={`pointer-events-none absolute left-0 right-0 mx-auto w-[816px] rounded-sm bg-white shadow-md ${
                   ghost && i === pageCount - 1 ? 'ai-glow' : ''
                 }`}
                 style={{
