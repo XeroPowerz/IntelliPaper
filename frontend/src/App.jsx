@@ -93,20 +93,46 @@ export default function App() {
       : null
   );
 
-  const PAGE_HEIGHT = 1056; // ~11in @96dpi
-  const PAGE_GAP = 32;
+  const [pageHeight, setPageHeight] = useState(1056); // ~11in @96dpi
+  const [pageGap, setPageGap] = useState(32);
+  const [marginClass, setMarginClass] = useState('p-10');
   const [pageCount, setPageCount] = useState(1);
   const editorContainerRef = useRef(null);
 
+  // Recalculate page count whenever the editor size or page height changes
   useEffect(() => {
     if (!editorContainerRef.current) return;
-    const observer = new ResizeObserver(entries => {
-      const height = entries[0].contentRect.height;
-      setPageCount(Math.max(1, Math.ceil(height / PAGE_HEIGHT)));
-    });
+    const updatePageCount = () => {
+      const height = editorContainerRef.current.offsetHeight;
+      setPageCount(Math.max(1, Math.ceil(height / pageHeight)));
+    };
+    updatePageCount();
+    const observer = new ResizeObserver(updatePageCount);
     observer.observe(editorContainerRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [pageHeight]);
+
+  // Fetch layout hints from the backend and apply them
+  const recalcLayout = async (overrides = {}) => {
+    if (!editor) return;
+    try {
+      const res = await axios.post('http://localhost:3001/api/layout', {
+        document: editor.getJSON(),
+        overrides,
+      });
+      if (res.data.pageHeight) setPageHeight(res.data.pageHeight);
+      if (res.data.pageGap) setPageGap(res.data.pageGap);
+      if (res.data.marginClass) setMarginClass(res.data.marginClass);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Initial layout calculation once the editor is ready
+  useEffect(() => {
+    if (!editor) return;
+    recalcLayout();
+  }, [editor]);
 
   useEffect(() => {
     if (!editor) return;
@@ -145,6 +171,8 @@ export default function App() {
       axios
         .post('http://localhost:3001/api/document', editor.getJSON())
         .catch(err => console.error(err));
+      // Recalculate layout hints based on the latest document structure
+      recalcLayout();
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(async () => {
         if (!text.trim()) return;
@@ -246,20 +274,24 @@ export default function App() {
         <div className="relative flex-1 overflow-y-auto bg-gray-200">
           <div
             className="relative mx-auto py-8"
-            style={{ height: pageCount * (PAGE_HEIGHT + PAGE_GAP) }}
+            style={{ height: pageCount * (pageHeight + pageGap) }}
           >
             {Array.from({ length: pageCount }).map((_, i) => (
               <div
                 key={i}
-                className={`pointer-events-none absolute left-1/2 -translate-x-1/2 w-[816px] h-[1056px] rounded-sm bg-white shadow-md ${
+                className={`pointer-events-none absolute left-1/2 -translate-x-1/2 w-[816px] rounded-sm bg-white shadow-md ${
                   ghost && i === pageCount - 1 ? 'ai-glow' : ''
                 }`}
-                style={{ top: i * (PAGE_HEIGHT + PAGE_GAP) }}
+                style={{
+                  top: i * (pageHeight + pageGap),
+                  height: pageHeight,
+                }}
               />
             ))}
             <div
               ref={editorContainerRef}
-              className="relative z-10 mx-auto w-[816px] min-h-[1056px] p-10 transition-all"
+              className={`relative z-10 mx-auto w-[816px] ${marginClass} transition-all`}
+              style={{ minHeight: pageHeight }}
             >
               <EditorContent
                 editor={editor}
