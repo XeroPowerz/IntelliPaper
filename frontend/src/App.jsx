@@ -1,6 +1,8 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import TextStyle from '@tiptap/extension-text-style';
+import TextAlign from '@tiptap/extension-text-align';
 import axios from 'axios';
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from 'prosemirror-state';
@@ -9,6 +11,7 @@ import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import Collaboration from '@tiptap/extension-collaboration';
 import { API_BASE_URL, WS_BASE_URL } from './apiConfig';
+import { parseFormattingIntent, applyFormatting } from './formattingMiddleware';
 
 const ghostKey = new PluginKey('ghost');
 
@@ -137,7 +140,13 @@ export default function App() {
   }, []);
 
   const editor = useEditor({
-    extensions: [StarterKit, Ghost, Collaboration.configure({ document: ydoc })],
+    extensions: [
+      StarterKit,
+      TextStyle,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      Ghost,
+      Collaboration.configure({ document: ydoc }),
+    ],
   });
 
   useEffect(() => {
@@ -357,17 +366,25 @@ export default function App() {
           }
           if (event.key === 'Enter') {
             const { from } = editor.state.selection;
-            const start = Math.max(0, from - 50);
+            const start = Math.max(0, from - 100);
             const textBefore = editor.state.doc.textBetween(start, from, '\n');
-            const match = textBefore.match(/\/(summarize|expand|rewrite|tutor)$/);
+            const match = textBefore.match(/\/([^\n]*)$/);
             if (match) {
+              const cmdText = match[1].trim();
+              const intent = parseFormattingIntent(cmdText);
               event.preventDefault();
               editor.commands.deleteRange({
                 from: from - match[0].length,
                 to: from,
               });
-              runSlashCommand(match[1]);
-              return true;
+              if (intent) {
+                applyFormatting(editor, intent);
+                return true;
+              }
+              if (['summarize', 'expand', 'rewrite', 'tutor'].includes(cmdText)) {
+                runSlashCommand(cmdText);
+                return true;
+              }
             }
           }
           return false;
@@ -402,6 +419,20 @@ export default function App() {
     if (!editor || !chatInput.trim()) return;
     const { from, to } = editor.state.selection;
     const selectedText = editor.state.doc.textBetween(from, to, '\n');
+
+    const intent = parseFormattingIntent(chatInput);
+    if (intent) {
+      const userMessage = { role: 'user', content: chatInput };
+      setMessages(prev => [
+        ...prev,
+        userMessage,
+        { role: 'assistant', content: 'Formatting applied.' },
+      ]);
+      applyFormatting(editor, intent);
+      setChatInput('');
+      return;
+    }
+
     const userMessage = { role: 'user', content: chatInput };
     setMessages(prev => [...prev, userMessage, { role: 'assistant', content: '' }]);
     setChatInput('');
