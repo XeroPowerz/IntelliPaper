@@ -5,6 +5,9 @@ import OpenAI from 'openai';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import http from 'http';
+import { WebSocketServer } from 'ws';
+import { setupWSConnection } from 'y-websocket/bin/utils';
 
 dotenv.config();
 
@@ -131,6 +134,35 @@ function buildPrompt(text, command) {
 }
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+const server = http.createServer(app);
+
+const wss = new WebSocketServer({ server });
+wss.on('connection', (conn, req) => {
+  const { pathname } = new URL(req.url, `http://${req.headers.host}`);
+  if (pathname === '/review') {
+    conn.on('message', async message => {
+      try {
+        const { text = '' } = JSON.parse(message.toString());
+        const prompt = `Provide a brief review comment for the following text:\n\n${text}`;
+        const completion = await openai.chat.completions.create({
+          model: 'gpt-3.5-turbo',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 60,
+        });
+        const comment = completion.choices[0].message.content.trim();
+        conn.send(JSON.stringify({ type: 'review', comment }));
+      } catch (err) {
+        console.error(err);
+        conn.send(
+          JSON.stringify({ type: 'review', comment: 'Failed to generate review' })
+        );
+      }
+    });
+  } else {
+    setupWSConnection(conn, req);
+  }
+});
+
+server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
