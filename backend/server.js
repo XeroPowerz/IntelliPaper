@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 
@@ -9,7 +12,31 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_FILE = path.join(__dirname, 'data', 'documentSchema.json');
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+app.get('/api/document', async (req, res) => {
+  try {
+    const data = await fs.readFile(DATA_FILE, 'utf8');
+    res.json(JSON.parse(data));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load document' });
+  }
+});
+
+app.post('/api/document', async (req, res) => {
+  try {
+    await fs.writeFile(DATA_FILE, JSON.stringify(req.body, null, 2));
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to save document' });
+  }
+});
 
 app.post('/api/ai', async (req, res) => {
   const { documentText, command } = req.body;

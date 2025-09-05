@@ -64,16 +64,34 @@ export default function App() {
   const [showSlash, setShowSlash] = useState(false);
   const [slashIndex, setSlashIndex] = useState(0);
 
+  const [initialContent, setInitialContent] = useState(null);
+
   const slashCommands = [
     { label: 'Summarize', value: 'summarize' },
     { label: 'Expand', value: 'expand' },
     { label: 'Rewrite', value: 'rewrite' },
   ];
 
-  const editor = useEditor({
-    extensions: [StarterKit, Ghost],
-    content: '',
-  });
+  useEffect(() => {
+    const fetchDoc = async () => {
+      try {
+        const res = await axios.get('http://localhost:3001/api/document');
+        setInitialContent(res.data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchDoc();
+  }, []);
+
+  const editor = useEditor(
+    initialContent
+      ? {
+          extensions: [StarterKit, Ghost],
+          content: initialContent,
+        }
+      : null
+  );
 
   const PAGE_HEIGHT = 1056; // ~11in @96dpi
   const PAGE_GAP = 32;
@@ -124,6 +142,9 @@ export default function App() {
     const updateHandler = ({ editor }) => {
       const text = editor.getText();
       clearGhost();
+      axios
+        .post('http://localhost:3001/api/document', editor.getJSON())
+        .catch(err => console.error(err));
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(async () => {
         if (!text.trim()) return;

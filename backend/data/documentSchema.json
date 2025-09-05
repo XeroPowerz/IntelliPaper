@@ -1,0 +1,15 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "paragraph",
+      "attrs": { "textAlign": "left" },
+      "content": [
+        {
+          "type": "text",
+          "text": "This is a sample document for the IntelliPaper demo. Highlight text and ask the AI for help."
+        }
+      ]
+    }
+  ]
+}
