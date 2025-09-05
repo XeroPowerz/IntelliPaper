@@ -66,11 +66,18 @@ The goal is not to reinvent the wheel, but to ask:
 - **Node.js + Express** (API server)
 - **AI model integration** (OpenAI, Anthropic, or local LLMs via LangChain)
 - **PostgreSQL** (for storing documents, metadata, and semantic structures)
+- **pgvector-backed vector store** for semantic block embeddings
 
 ### AI Layer
 - Natural language rewriting, summarization, tone adaptation
 - Semantic embedding storage for concept-level document understanding
 - Optional vector database (Pinecone, Weaviate, or pgvector)
+
+### Embedding APIs
+The backend exposes endpoints for working with semantic embeddings:
+
+- `POST /api/blocks/:blockId/embedding` — generate and persist an embedding for a document block.
+- `POST /api/blocks/search` — query similar document blocks using semantic similarity.
 
 ---
 

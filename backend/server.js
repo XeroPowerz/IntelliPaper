@@ -10,6 +10,7 @@ import { WebSocketServer } from 'ws';
 import { setupWSConnection } from 'y-websocket/bin/utils';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { Document as DocxDocument, Packer, Paragraph } from 'docx';
+import { saveBlockEmbedding, searchBlockEmbeddings } from './embeddingService.js';
 
 dotenv.config();
 
@@ -60,6 +61,37 @@ app.post('/api/layout', (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to process layout hints' });
+  }
+});
+
+app.post('/api/blocks/:blockId/embedding', async (req, res) => {
+  const { blockId } = req.params;
+  const { text } = req.body || {};
+  if (!blockId || !text) {
+    return res.status(400).json({ error: 'blockId and text are required' });
+  }
+
+  try {
+    await saveBlockEmbedding(blockId, text);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to save embedding' });
+  }
+});
+
+app.post('/api/blocks/search', async (req, res) => {
+  const { query, limit } = req.body || {};
+  if (!query) {
+    return res.status(400).json({ error: 'query is required' });
+  }
+
+  try {
+    const results = await searchBlockEmbeddings(query, limit);
+    res.json({ results });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Search failed' });
   }
 });
 
