@@ -80,6 +80,42 @@ app.post('/api/ai', async (req, res) => {
   }
 });
 
+// Stream AI-generated edits for a given instruction and selection.
+// The client sends the user's instruction along with the currently
+// selected text. The endpoint streams back the revised text which can
+// be applied on the client to update the document model.
+app.post('/api/commands', async (req, res) => {
+  const { instruction, selectedText = '' } = req.body || {};
+  if (!instruction) {
+    return res.status(400).json({ error: 'instruction is required' });
+  }
+
+  const prompt = `You are a helpful document editor. The user has selected the following text:\n\n${selectedText}\n\nInstruction: ${instruction}\n\nReturn the updated selection text:`;
+
+  try {
+    const stream = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      stream: true,
+    });
+
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked');
+
+    for await (const part of stream) {
+      const token = part.choices[0]?.delta?.content || '';
+      if (token) {
+        res.write(token);
+      }
+    }
+
+    res.end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Command processing failed' });
+  }
+});
+
 function buildPrompt(text, command) {
   switch (command) {
     case 'summarize':
