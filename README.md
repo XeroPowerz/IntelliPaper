@@ -1,108 +1,103 @@
-AI-Native Word Processor
-Overview
+# IntelliPaper
+## AI-Native Word Processor
 
-Traditional word processors like Microsoft Word were built on a digital-native foundation: they turned paper into a digital page, giving us formatting, storage, and sharing capabilities that made computers indispensable.
+---
 
-This project explores the next abstraction layer: an AI-native word processor. Instead of treating documents as static text files, it treats them as living, semantic objects that can be understood, reshaped, and co-authored by artificial intelligence.
+## Overview
 
-The goal is not to reinvent the wheel, but to ask what we no longer need, what we still keep, and what we now need in the age of AI.
+Traditional word processors (like Microsoft Word) were built on a **digital-native** foundation: they turned paper into a digital page, making documents editable, searchable, and shareable.
 
-Vision
+This project explores the **next abstraction layer**: an **AI-native word processor**. Instead of treating documents as static text files, it treats them as living, semantic objects that can be co-authored and reshaped by artificial intelligence.
 
-From Paper → Word (digital-native): The leap was making documents editable, searchable, and shareable on computers.
+The goal is not to reinvent the wheel, but to ask:
 
-From Word → AI-Native: The leap now is making documents intelligent: able to understand meaning, transform content, and collaborate with the writer.
+- What do we no longer need?
+- What do we still keep?
+- What do we now need in the AI era?
 
-This project imagines a workspace where text is alive, and interaction is conversational + semantic rather than menu-driven.
+---
 
-What Stays, Goes, and Evolves
-What We No Longer Need
+## Features
 
-Overloaded toolbars and menus
+### What We No Longer Need
 
-Static spellcheck and grammar tools
+- Cluttered toolbars and endless formatting menus
+- Static spellcheck/grammar checkers
+- Rigid, pre-defined templates
 
-Rigid, pre-defined templates
+### What We Still Keep
 
-What We Still Keep
+- A text editing space (WYSIWYG editor)
+- Paragraph and section structure
+- Undo/redo control for edits
+- Export to standard formats (PDF, DOCX)
 
-A text editing space
+### What We Now Need
 
-Paragraph and section structure
+- **AI actions** on text blocks (summarize, expand, reframe, translate)
+- **Conversational interface** for editing ("make this section more persuasive")
+- **Semantic representation** of ideas (not just characters)
+- **Context-awareness** (tone, audience, intent)
+- **Collaborative AI** co-writing
 
-Control over edits (undo/redo)
+---
 
-Export to standard formats (PDF, DOCX, etc.)
+## Example Use Cases
 
-What We Now Need
+**Academic Writing**
+- Generate citations, reframe arguments, simplify for lay audiences
 
-AI-powered actions on every text block (summarize, expand, change tone, translate)
+**Business Docs**
+- Draft proposals, change tone for different stakeholders, auto-generate slide decks
 
-Conversational interface for editing (“Make this section more persuasive”)
+**Creative Writing**
+- Brainstorm ideas, expand outlines into drafts, rewrite in different voices
 
-Semantic storage of ideas and relationships, not just characters
+---
 
-Context awareness (audience, purpose, tone)
+## Architecture
 
-Collaborative co-writing with the AI as a partner
+### Frontend
+- **React** (UI framework)
+- **TipTap** for rich-text editing
+- **TailwindCSS** for styling
 
-Example Use Cases
+### Backend
+- **Node.js + Express** (API server)
+- **AI model integration** (OpenAI, Anthropic, or local LLMs via LangChain)
+- **PostgreSQL** (for storing documents, metadata, and semantic structures)
 
-Academic Writing: Generate citations, reframe arguments, simplify for lay audiences.
+### AI Layer
+- Natural language rewriting, summarization, tone adaptation
+- Semantic embedding storage for concept-level document understanding
+- Optional vector database (Pinecone, Weaviate, or pgvector)
 
-Business Docs: Draft proposals, adapt tone for different stakeholders, auto-generate slide decks.
+---
 
-Creative Writing: Brainstorm ideas, rewrite passages in different styles, expand outlines into drafts.
+## Project Goals
 
-Architecture
+- Build a prototype editor (web-based, using ProseMirror, TipTap, or Quill)
+- Integrate AI actions on text blocks using modern LLM APIs
+- Develop a conversational layer that allows intent-driven editing
+- Experiment with semantic document structures that go beyond raw text
 
-Frontend:
+---
 
-React (UI framework)
+## Roadmap
 
-TipTap for rich-text editing
+**Phase 1:** Skeleton editor with AI actions on text blocks
 
-TailwindCSS for styling
+**Phase 2:** Conversational editing interface
 
-Backend:
+**Phase 3:** Semantic storage (ideas, relationships)
 
-Node.js + Express (API server)
+**Phase 4:** Collaboration and multi-user AI features
 
-AI model integration (e.g., OpenAI, Anthropic, or local LLMs via LangChain)
+---
 
-Database: PostgreSQL (for storing documents, metadata, and semantic structures)
+## Why This Matters
 
-AI Layer:
+> Word made writing digital.  
+> This project makes writing intelligent.
 
-Natural language rewriting, summarization, tone adaptation
-
-Semantic embedding storage for concept-level document understanding
-
-Optional vector database (e.g., Pinecone, Weaviate, or pgvector)
-
-Project Goals
-
-Build a prototype editor (web-based, using something like ProseMirror, TipTap, or Quill).
-
-Integrate AI actions on text blocks using modern LLM APIs.
-
-Develop a conversational layer that allows intent-driven editing.
-
-Experiment with semantic document structures that go beyond raw text.
-
-Roadmap
-
-Phase 1: Skeleton editor with AI actions on text blocks.
-
-Phase 2: Conversational editing interface.
-
-Phase 3: Semantic storage (ideas, relationships).
-
-Phase 4: Collaboration and multi-user AI features.
-
-Why This Matters
-
-Word made writing digital.
-This project makes writing intelligent.
-
-It’s not about replacing documents — it’s about reinventing how humans interact with them.
+It's not about replacing documents — it's about reinventing how humans interact with them.
