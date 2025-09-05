@@ -71,7 +71,6 @@ export default function App() {
   const ydoc = useMemo(() => new Y.Doc(), []);
   const providerRef = useRef(null);
   const reviewSocket = useRef(null);
-  const [changes, setChanges] = useState([]);
   const [messages, setMessages] = useState([]);
 
   const slashCommands = [
@@ -133,7 +132,6 @@ export default function App() {
   useEffect(() => {
     if (!editor) return;
     const handler = () => {
-      setChanges(prev => [...prev, `Change ${prev.length + 1}`]);
       try {
         const text = editor.getText();
         reviewSocket.current?.send(JSON.stringify({ text }));
@@ -410,46 +408,6 @@ export default function App() {
             </div>
           </div>
         </div>
-        <aside className="hidden w-80 flex-shrink-0 border-l bg-white md:flex md:flex-col">
-          <div className="flex-1 overflow-y-auto">
-            <div className="border-b p-4">
-              <h2 className="mb-2 text-sm font-semibold">Tracked Changes</h2>
-              {changes.map((c, i) => (
-                <div key={i} className="mb-1 text-xs text-gray-700">
-                  {c}
-                </div>
-              ))}
-            </div>
-            <div className="p-4">
-              <h2 className="mb-2 text-sm font-semibold">AI Suggestions</h2>
-              {messages.map((m, i) => (
-                <div
-                  key={i}
-                  className={`mb-2 text-sm ${
-                    m.role === 'user' ? 'text-gray-800' : 'text-blue-600'
-                  }`}
-                >
-                  {m.content}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="border-t p-2">
-            <form
-              onSubmit={e => {
-                e.preventDefault();
-                sendCommand();
-              }}
-            >
-              <input
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                placeholder="Send a command..."
-                className="w-full rounded border px-2 py-1 text-sm"
-              />
-            </form>
-          </div>
-        </aside>
       </div>
     </div>
   );
