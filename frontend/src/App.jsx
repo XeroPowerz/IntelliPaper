@@ -82,6 +82,7 @@ export default function App() {
     { label: 'Summarize', value: 'summarize' },
     { label: 'Expand', value: 'expand' },
     { label: 'Rewrite', value: 'rewrite' },
+    { label: 'Tutor', value: 'tutor' },
   ];
 
   useEffect(() => {
@@ -198,6 +199,9 @@ export default function App() {
     recalcLayout();
   }, [editor]);
 
+  const [tutorResult, setTutorResult] = useState(null);
+  const [showTutor, setShowTutor] = useState(false);
+
   useEffect(() => {
     if (!editor) return;
 
@@ -219,6 +223,17 @@ export default function App() {
 
     const runSlashCommand = async cmd => {
       try {
+        if (cmd === 'tutor') {
+          const { from, to } = editor.state.selection;
+          const text = editor.state.doc.textBetween(from, to, '\n');
+          const res = await axios.post(
+            'http://localhost:3001/api/plugins/tutor/explain',
+            { text }
+          );
+          setTutorResult(res.data);
+          setShowTutor(true);
+          return;
+        }
         const res = await axios.post('http://localhost:3001/api/ai', {
           documentText: editor.getText(),
           command: cmd,
@@ -304,7 +319,7 @@ export default function App() {
             const { from } = editor.state.selection;
             const start = Math.max(0, from - 50);
             const textBefore = editor.state.doc.textBetween(start, from, '\n');
-            const match = textBefore.match(/\/(summarize|expand|rewrite)$/);
+            const match = textBefore.match(/\/(summarize|expand|rewrite|tutor)$/);
             if (match) {
               event.preventDefault();
               editor.commands.deleteRange({
@@ -517,6 +532,41 @@ export default function App() {
           </div>
         </aside>
       </div>
+      {showTutor && tutorResult && (
+        <div className="fixed right-0 top-0 bottom-0 w-80 border-l bg-white shadow-lg">
+          <div className="flex items-center justify-between border-b p-4">
+            <h2 className="text-sm font-semibold">Tutor</h2>
+            <button
+              className="text-xs text-gray-500 hover:text-gray-700"
+              onClick={() => setShowTutor(false)}
+            >
+              Close
+            </button>
+          </div>
+          <div className="p-4 overflow-y-auto text-sm">
+            {tutorResult.steps?.length > 0 && (
+              <>
+                <h3 className="mb-2 font-medium">Explanation</h3>
+                <ol className="mb-4 list-decimal list-inside">
+                  {tutorResult.steps.map((s, i) => (
+                    <li key={i} className="mb-1">{s}</li>
+                  ))}
+                </ol>
+              </>
+            )}
+            {tutorResult.quiz?.length > 0 && (
+              <>
+                <h3 className="mb-2 font-medium">Quiz</h3>
+                <ul className="list-disc list-inside">
+                  {tutorResult.quiz.map((q, i) => (
+                    <li key={i} className="mb-1">{q}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
