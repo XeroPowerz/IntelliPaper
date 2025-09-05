@@ -40,9 +40,12 @@ const Ghost = Extension.create({
             const pos = state.selection.to;
             const deco = Decoration.widget(pos, () => {
               const span = document.createElement('span');
-              span.style.opacity = '0.5';
-              span.style.pointerEvents = 'none';
               span.textContent = text;
+              span.className =
+                'ghost-suggestion opacity-0 text-gray-400 select-none pointer-events-none transition-opacity duration-300';
+              requestAnimationFrame(() => {
+                span.style.opacity = '0.5';
+              });
               return span;
             });
             return DecorationSet.create(state.doc, [deco]);
@@ -58,6 +61,15 @@ export default function App() {
   const ghostRef = useRef('');
   const timer = useRef(null);
 
+  const [showSlash, setShowSlash] = useState(false);
+  const [slashIndex, setSlashIndex] = useState(0);
+
+  const slashCommands = [
+    { label: 'Summarize', value: 'summarize' },
+    { label: 'Expand', value: 'expand' },
+    { label: 'Rewrite', value: 'rewrite' },
+  ];
+
   const editor = useEditor({
     extensions: [StarterKit, Ghost],
     content: '',
@@ -67,9 +79,19 @@ export default function App() {
     if (!editor) return;
 
     const clearGhost = () => {
-      setGhost('');
-      ghostRef.current = '';
-      editor.commands.setGhost('');
+      const el = document.querySelector('.ghost-suggestion');
+      if (el) {
+        el.style.opacity = '0';
+        setTimeout(() => {
+          setGhost('');
+          ghostRef.current = '';
+          editor.commands.setGhost('');
+        }, 200);
+      } else {
+        setGhost('');
+        ghostRef.current = '';
+        editor.commands.setGhost('');
+      }
     };
 
     const runSlashCommand = async cmd => {
@@ -118,16 +140,49 @@ export default function App() {
           }
           if (event.key === 'Escape') {
             clearGhost();
+            setShowSlash(false);
             return true;
+          }
+          if (event.key === '/' && !showSlash) {
+            setShowSlash(true);
+            setSlashIndex(0);
+            return false;
+          }
+          if (showSlash) {
+            if (event.key === 'ArrowDown') {
+              event.preventDefault();
+              setSlashIndex((slashIndex + 1) % slashCommands.length);
+              return true;
+            }
+            if (event.key === 'ArrowUp') {
+              event.preventDefault();
+              setSlashIndex(
+                (slashIndex - 1 + slashCommands.length) % slashCommands.length
+              );
+              return true;
+            }
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              const cmd = slashCommands[slashIndex].value;
+              editor.commands.insertContent(`/${cmd} `);
+              setShowSlash(false);
+              return true;
+            }
+            if (event.key === ' ' || event.key === 'Backspace') {
+              setShowSlash(false);
+            }
           }
           if (event.key === 'Enter') {
             const { from } = editor.state.selection;
             const start = Math.max(0, from - 50);
-            const textBefore = editor.state.doc.textBetween(start, from, '\n');
-            const match = textBefore.match(/\/(summarize|expand|rewrite)$/);
+            const textBefore = editor.state.doc.textBetween(start, from, '\\n');
+            const match = textBefore.match(/\\/(summarize|expand|rewrite)$/);
             if (match) {
               event.preventDefault();
-              editor.commands.deleteRange({ from: from - match[0].length, to: from });
+              editor.commands.deleteRange({
+                from: from - match[0].length,
+                to: from,
+              });
               runSlashCommand(match[1]);
               return true;
             }
@@ -140,14 +195,50 @@ export default function App() {
     return () => {
       editor.off('update', updateHandler);
     };
-  }, [editor]);
+  }, [editor, slashIndex, showSlash]);
 
   return (
-    <div style={{ height: '100vh', padding: '1rem' }}>
-      <EditorContent editor={editor} />
-      <p style={{ marginTop: '1rem', color: '#666' }}>
-        Type freely. Use /summarize, /expand, or /rewrite and press Enter. Tab accepts suggestions.
-      </p>
+    <div className="flex h-screen flex-col bg-gray-50">
+      <header className="flex items-center justify-between border-b bg-white px-6 py-3">
+        <input
+          className="w-full max-w-md bg-transparent text-lg font-semibold text-gray-800 placeholder-gray-400 focus:outline-none"
+          placeholder="Untitled Document"
+        />
+        <button className="ml-4 rounded px-2 py-1 text-gray-500 hover:text-gray-700">•••</button>
+      </header>
+      <div className="flex flex-1 overflow-hidden">
+        <div className="relative flex-1 overflow-y-auto p-8">
+          <EditorContent
+            editor={editor}
+            className="prose prose-lg max-w-none focus:outline-none"
+          />
+          {showSlash && (
+            <div className="absolute left-8 top-8 z-10 w-48 overflow-hidden rounded-md border bg-white shadow-lg">
+              {slashCommands.map((cmd, i) => (
+                <div
+                  key={cmd.value}
+                  className={`cursor-pointer px-4 py-2 text-sm ${
+                    i === slashIndex ? 'bg-gray-100' : ''
+                  }`}
+                >
+                  {cmd.label}
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="mt-8 text-sm text-gray-500">
+            Type freely. Use /summarize, /expand, or /rewrite and press Enter.
+            Tab accepts suggestions.
+          </p>
+        </div>
+        <aside className="hidden w-64 flex-shrink-0 border-l bg-white p-6 md:block">
+          <h2 className="mb-4 text-sm font-semibold text-gray-600">AI Insights</h2>
+          <p className="text-sm text-gray-500">
+            Deeper AI insights will appear here.
+          </p>
+        </aside>
+      </div>
     </div>
   );
 }
+
