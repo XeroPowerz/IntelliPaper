@@ -11,30 +11,41 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-app.post('/api/analyze', async (req, res) => {
-  const { documentText, highlightedText, userQuery } = req.body;
-  if (!highlightedText || !userQuery) {
-    return res.status(400).json({ error: 'highlightedText and userQuery are required' });
+app.post('/api/ai', async (req, res) => {
+  const { documentText, command } = req.body;
+  if (!command) {
+    return res.status(400).json({ error: 'command is required' });
   }
+
+  const prompt = buildPrompt(documentText || '', command);
+
   try {
-    const prompt = `You are assisting with document editing.\nDocument: "${documentText}"\nHighlighted: "${highlightedText}"\nUser asks: "${userQuery}"\nRespond with JSON {"response": <answer>, "suggestedEdit": <new text or null>}.`;
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 120,
     });
-    let ai = completion.choices[0].message.content;
-    let parsed;
-    try {
-      parsed = JSON.parse(ai);
-    } catch (e) {
-      parsed = { response: ai, suggestedEdit: null };
-    }
-    res.json(parsed);
+    const suggestion = completion.choices[0].message.content.trim();
+    res.json({ suggestion });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'AI analysis failed' });
+    res.status(500).json({ error: 'AI generation failed' });
   }
 });
+
+function buildPrompt(text, command) {
+  switch (command) {
+    case 'summarize':
+      return `Summarize the following text:\n\n${text}\n\nSummary:`;
+    case 'expand':
+      return `Expand on the following text:\n\n${text}\n\nExpansion:`;
+    case 'rewrite':
+      return `Rewrite the following text to improve clarity:\n\n${text}\n\nRewrite:`;
+    case 'autocomplete':
+    default:
+      return `Continue the following text:\n\n${text}\n\nContinuation:`;
+  }
+}
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
