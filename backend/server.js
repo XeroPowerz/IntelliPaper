@@ -269,3 +269,5 @@ wss.on('connection', (conn, req) => {
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
+
+export { app, server };
