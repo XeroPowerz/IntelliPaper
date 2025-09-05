@@ -75,6 +75,21 @@ export default function App() {
     content: '',
   });
 
+  const PAGE_HEIGHT = 1056; // ~11in @96dpi
+  const PAGE_GAP = 32;
+  const [pageCount, setPageCount] = useState(1);
+  const editorContainerRef = useRef(null);
+
+  useEffect(() => {
+    if (!editorContainerRef.current) return;
+    const observer = new ResizeObserver(entries => {
+      const height = entries[0].contentRect.height;
+      setPageCount(Math.max(1, Math.ceil(height / PAGE_HEIGHT)));
+    });
+    observer.observe(editorContainerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     if (!editor) return;
 
@@ -207,28 +222,48 @@ export default function App() {
         <button className="ml-4 rounded px-2 py-1 text-gray-500 hover:text-gray-700">•••</button>
       </header>
       <div className="flex flex-1 overflow-hidden">
-        <div className="relative flex-1 overflow-y-auto p-8">
-          <EditorContent
-            editor={editor}
-            className="prose prose-lg max-w-none focus:outline-none"
-          />
-          {showSlash && (
-            <div className="absolute left-8 top-8 z-10 w-48 overflow-hidden rounded-md border bg-white shadow-lg">
-              {slashCommands.map((cmd, i) => (
-                <div
-                  key={cmd.value}
-                  className={`cursor-pointer px-4 py-2 text-sm ${i === slashIndex ? 'bg-gray-100' : ''
-                    }`}
-                >
-                  {cmd.label}
+        <div className="relative flex-1 overflow-y-auto bg-gray-200">
+          <div
+            className="relative mx-auto py-8"
+            style={{ height: pageCount * (PAGE_HEIGHT + PAGE_GAP) }}
+          >
+            {Array.from({ length: pageCount }).map((_, i) => (
+              <div
+                key={i}
+                className={`pointer-events-none absolute left-1/2 -translate-x-1/2 w-[816px] h-[1056px] rounded-sm bg-white shadow-md ${
+                  ghost && i === pageCount - 1 ? 'ai-glow' : ''
+                }`}
+                style={{ top: i * (PAGE_HEIGHT + PAGE_GAP) }}
+              />
+            ))}
+            <div
+              ref={editorContainerRef}
+              className="relative z-10 mx-auto w-[816px] min-h-[1056px] p-10 transition-all"
+            >
+              <EditorContent
+                editor={editor}
+                className="prose prose-lg max-w-none focus:outline-none"
+              />
+              {showSlash && (
+                <div className="absolute left-4 top-4 z-10 w-48 overflow-hidden rounded-md border bg-white shadow-lg">
+                  {slashCommands.map((cmd, i) => (
+                    <div
+                      key={cmd.value}
+                      className={`cursor-pointer px-4 py-2 text-sm ${
+                        i === slashIndex ? 'bg-gray-100' : ''
+                      }`}
+                    >
+                      {cmd.label}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+              <p className="mt-8 text-sm text-gray-500">
+                Type freely. Use /summarize, /expand, or /rewrite and press Enter.
+                Tab accepts suggestions.
+              </p>
             </div>
-          )}
-          <p className="mt-8 text-sm text-gray-500">
-            Type freely. Use /summarize, /expand, or /rewrite and press Enter.
-            Tab accepts suggestions.
-          </p>
+          </div>
         </div>
         <aside className="hidden w-64 flex-shrink-0 border-l bg-white p-6 md:block">
           <h2 className="mb-4 text-sm font-semibold text-gray-600">AI Insights</h2>
