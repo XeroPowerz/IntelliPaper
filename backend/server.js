@@ -41,9 +41,9 @@ export function registerPlugin(plugin) {
 // ENABLED_PLUGINS is set, only those plugins will be loaded (comma separated).
 async function loadPlugins() {
   const pluginsDir = path.join(__dirname, 'plugins');
-  let files = [];
+  let entries = [];
   try {
-    files = await fs.readdir(pluginsDir);
+    entries = await fs.readdir(pluginsDir, { withFileTypes: true });
   } catch (err) {
     if (err.code !== 'ENOENT') {
       console.error('Failed to read plugins directory', err);
@@ -55,18 +55,31 @@ async function loadPlugins() {
     .map(s => s.trim())
     .filter(Boolean);
 
-  for (const file of files) {
-    if (!file.endsWith('.js')) continue;
-    const name = path.basename(file, '.js');
-    if (enabled.length && !enabled.includes(name)) continue;
-    try {
-      const mod = await import(path.join(pluginsDir, file));
-      const init = mod.default;
-      if (typeof init === 'function') {
-        await init(registerPlugin);
+  for (const entry of entries) {
+    if (entry.isFile() && entry.name.endsWith('.js')) {
+      const name = path.basename(entry.name, '.js');
+      if (enabled.length && !enabled.includes(name)) continue;
+      try {
+        const mod = await import(path.join(pluginsDir, entry.name));
+        const init = mod.default;
+        if (typeof init === 'function') {
+          await init(registerPlugin);
+        }
+      } catch (err) {
+        console.error(`Failed to load plugin ${name}`, err);
       }
-    } catch (err) {
-      console.error(`Failed to load plugin ${name}`, err);
+    } else if (entry.isDirectory()) {
+      const name = entry.name;
+      if (enabled.length && !enabled.includes(name)) continue;
+      try {
+        const mod = await import(path.join(pluginsDir, name, 'index.js'));
+        const init = mod.default;
+        if (typeof init === 'function') {
+          await init(registerPlugin);
+        }
+      } catch (err) {
+        console.error(`Failed to load plugin ${name}`, err);
+      }
     }
   }
 }
