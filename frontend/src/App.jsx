@@ -74,10 +74,6 @@ export default function App() {
   const [changes, setChanges] = useState([]);
   const [messages, setMessages] = useState([]);
 
-  const [plugins, setPlugins] = useState([]);
-  const [selectedPlugin, setSelectedPlugin] = useState('');
-  const [selectedAction, setSelectedAction] = useState('');
-
   const slashCommands = [
     { label: 'Summarize', value: 'summarize' },
     { label: 'Expand', value: 'expand' },
@@ -96,12 +92,6 @@ export default function App() {
     fetchDoc();
   }, []);
 
-  useEffect(() => {
-    axios
-      .get('http://localhost:3001/api/plugins')
-      .then(res => setPlugins(res.data))
-      .catch(e => console.error(e));
-  }, []);
 
   const editor = useEditor({
     extensions: [StarterKit, Ghost, Collaboration.configure({ document: ydoc })],
@@ -325,24 +315,6 @@ export default function App() {
     };
   }, [editor, slashIndex, showSlash]);
 
-  const runPlugin = async () => {
-    if (!editor || !selectedPlugin || !selectedAction) return;
-    const { from, to } = editor.state.selection;
-    const text = editor.state.doc.textBetween(from, to, '\n');
-    try {
-      const res = await axios.post(
-        `http://localhost:3001/api/plugins/${selectedPlugin}/${selectedAction}`,
-        { text }
-      );
-      const result = res.data.result || '';
-      if (result) {
-        editor.chain().focus().insertContentAt({ from, to }, result).run();
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   const sendCommand = async () => {
     if (!editor || !chatInput.trim()) return;
     const { from, to } = editor.state.selection;
@@ -463,44 +435,6 @@ export default function App() {
             </div>
           </div>
           <div className="border-t p-2">
-            <div className="mb-2 flex space-x-2">
-              <select
-                value={selectedPlugin}
-                onChange={e => {
-                  setSelectedPlugin(e.target.value);
-                  setSelectedAction('');
-                }}
-                className="flex-1 rounded border px-2 py-1 text-sm"
-              >
-                <option value="">Select plugin</option>
-                {plugins.map(p => (
-                  <option key={p.name} value={p.name}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={selectedAction}
-                onChange={e => setSelectedAction(e.target.value)}
-                disabled={!selectedPlugin}
-                className="flex-1 rounded border px-2 py-1 text-sm"
-              >
-                <option value="">Action</option>
-                {plugins
-                  .find(p => p.name === selectedPlugin)?.actions.map(a => (
-                    <option key={a.name} value={a.name}>
-                      {a.name}
-                    </option>
-                  ))}
-              </select>
-              <button
-                onClick={runPlugin}
-                disabled={!selectedPlugin || !selectedAction}
-                className="rounded bg-blue-500 px-2 py-1 text-white disabled:opacity-50"
-              >
-                Run
-              </button>
-            </div>
             <form
               onSubmit={e => {
                 e.preventDefault();
