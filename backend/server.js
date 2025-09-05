@@ -38,6 +38,26 @@ app.post('/api/document', async (req, res) => {
   }
 });
 
+// Return layout hints such as page size and margin classes.
+// The current implementation is a placeholder that simply echoes
+// default values. In a real system this would analyze the document
+// structure to determine appropriate layout instructions.
+app.post('/api/layout', (req, res) => {
+  try {
+    const { document } = req.body || {};
+    // Basic example hints; ignore document for now.
+    res.json({
+      pageHeight: 1056,
+      pageGap: 32,
+      marginClass: 'p-10',
+      pageBreaks: [],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to process layout hints' });
+  }
+});
+
 app.post('/api/ai', async (req, res) => {
   const { documentText, command } = req.body;
   if (!command) {
