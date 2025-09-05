@@ -150,6 +150,9 @@ export default function App() {
   const editorContainerRef = useRef(null);
 
   const [chatInput, setChatInput] = useState('');
+  const [tone, setTone] = useState('');
+  const [audience, setAudience] = useState('');
+  const [intent, setIntent] = useState('');
 
   // Recalculate page count whenever the editor size or page height changes
   useEffect(() => {
@@ -210,6 +213,10 @@ export default function App() {
         const res = await axios.post('http://localhost:3001/api/ai', {
           documentText: editor.getText(),
           command: cmd,
+          tone,
+          audience,
+          intent,
+          messages,
         });
         editor.commands.insertContent(res.data.suggestion);
       } catch (e) {
@@ -232,6 +239,10 @@ export default function App() {
           const res = await axios.post('http://localhost:3001/api/ai', {
             documentText: text,
             command: 'autocomplete',
+            tone,
+            audience,
+            intent,
+            messages,
           });
           const suggestion = res.data.suggestion;
           setGhost(suggestion);
@@ -311,20 +322,28 @@ export default function App() {
     return () => {
       editor.off('update', updateHandler);
     };
-  }, [editor, slashIndex, showSlash]);
+  }, [editor, slashIndex, showSlash, tone, audience, intent, messages]);
 
   const sendCommand = async () => {
     if (!editor || !chatInput.trim()) return;
     const { from, to } = editor.state.selection;
     const selectedText = editor.state.doc.textBetween(from, to, '\n');
     const userMessage = { role: 'user', content: chatInput };
-    setMessages(prev => [...prev, userMessage, { role: 'assistant', content: '' }]);
+    const history = [...messages, userMessage];
+    setMessages(prev => [...history, { role: 'assistant', content: '' }]);
     setChatInput('');
     try {
       const res = await fetch('http://localhost:3001/api/commands', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instruction: userMessage.content, selectedText }),
+        body: JSON.stringify({
+          instruction: userMessage.content,
+          selectedText,
+          tone,
+          audience,
+          intent,
+          messages: history,
+        }),
       });
 
       const reader = res.body.getReader();
@@ -443,6 +462,52 @@ export default function App() {
                 Tab accepts suggestions.
               </p>
             </div>
+          </div>
+        </div>
+        <div className="w-80 border-l bg-white flex flex-col">
+          <div className="flex-1 overflow-y-auto p-2">
+            {messages.map((m, i) => (
+              <div
+                key={i}
+                className={`mb-2 text-sm ${m.role === 'user' ? 'text-blue-700' : 'text-gray-700'}`}
+              >
+                <span className="font-semibold">{m.role === 'user' ? 'You' : 'AI'}:</span>{' '}
+                {m.content}
+              </div>
+            ))}
+          </div>
+          <div className="border-t p-2 space-y-2">
+            <input
+              className="w-full rounded border p-1 text-sm"
+              placeholder="Tone"
+              value={tone}
+              onChange={e => setTone(e.target.value)}
+            />
+            <input
+              className="w-full rounded border p-1 text-sm"
+              placeholder="Audience"
+              value={audience}
+              onChange={e => setAudience(e.target.value)}
+            />
+            <input
+              className="w-full rounded border p-1 text-sm"
+              placeholder="Intent"
+              value={intent}
+              onChange={e => setIntent(e.target.value)}
+            />
+            <textarea
+              className="w-full rounded border p-1 text-sm"
+              rows={2}
+              placeholder="Message"
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+            />
+            <button
+              onClick={sendCommand}
+              className="w-full rounded bg-blue-500 py-1 text-sm text-white hover:bg-blue-600"
+            >
+              Send
+            </button>
           </div>
         </div>
       </div>

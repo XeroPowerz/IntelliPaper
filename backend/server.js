@@ -149,12 +149,17 @@ app.post('/api/export', async (req, res) => {
 });
 
 app.post('/api/ai', async (req, res) => {
-  const { documentText, command } = req.body;
+  const { documentText, command, tone, audience, intent, messages } = req.body;
   if (!command) {
     return res.status(400).json({ error: 'command is required' });
   }
 
-  const prompt = buildPrompt(documentText || '', command);
+  const prompt = buildPrompt(documentText || '', command, {
+    tone,
+    audience,
+    intent,
+    messages,
+  });
 
   try {
     const completion = await openai.chat.completions.create({
@@ -175,12 +180,30 @@ app.post('/api/ai', async (req, res) => {
 // selected text. The endpoint streams back the revised text which can
 // be applied on the client to update the document model.
 app.post('/api/commands', async (req, res) => {
-  const { instruction, selectedText = '' } = req.body || {};
+  const {
+    instruction,
+    selectedText = '',
+    tone,
+    audience,
+    intent,
+    messages = [],
+  } = req.body || {};
   if (!instruction) {
     return res.status(400).json({ error: 'instruction is required' });
   }
 
-  const prompt = `You are a helpful document editor. The user has selected the following text:\n\n${selectedText}\n\nInstruction: ${instruction}\n\nReturn the updated selection text:`;
+  const context = [];
+  if (tone) context.push(`Tone: ${tone}`);
+  if (audience) context.push(`Audience: ${audience}`);
+  if (intent) context.push(`Intent: ${intent}`);
+  const contextBlock = context.length ? `\n\nContext:\n${context.join('\n')}` : '';
+  const history = messages.length
+    ? `\n\nConversation so far:\n${messages
+        .map(m => `${m.role}: ${m.content}`)
+        .join('\n')}`
+    : '';
+
+  const prompt = `You are a helpful document editor.${contextBlock}${history}\n\nThe user has selected the following text:\n\n${selectedText}\n\nInstruction: ${instruction}\n\nReturn the updated selection text:`;
 
   try {
     const stream = await openai.chat.completions.create({
@@ -206,17 +229,32 @@ app.post('/api/commands', async (req, res) => {
   }
 });
 
-function buildPrompt(text, command) {
+function buildPrompt(
+  text,
+  command,
+  { tone, audience, intent, messages } = {}
+) {
+  const context = [];
+  if (tone) context.push(`Tone: ${tone}`);
+  if (audience) context.push(`Audience: ${audience}`);
+  if (intent) context.push(`Intent: ${intent}`);
+  const contextBlock = context.length ? `\n\nContext:\n${context.join('\n')}` : '';
+  const history = messages && messages.length
+    ? `\n\nConversation so far:\n${messages
+        .map(m => `${m.role}: ${m.content}`)
+        .join('\n')}`
+    : '';
+
   switch (command) {
     case 'summarize':
-      return `Summarize the following text:\n\n${text}\n\nSummary:`;
+      return `You are a helpful assistant.${contextBlock}${history}\n\nSummarize the following text:\n\n${text}\n\nSummary:`;
     case 'expand':
-      return `Expand on the following text:\n\n${text}\n\nExpansion:`;
+      return `You are a helpful assistant.${contextBlock}${history}\n\nExpand on the following text:\n\n${text}\n\nExpansion:`;
     case 'rewrite':
-      return `Rewrite the following text to improve clarity:\n\n${text}\n\nRewrite:`;
+      return `You are a helpful assistant.${contextBlock}${history}\n\nRewrite the following text to improve clarity:\n\n${text}\n\nRewrite:`;
     case 'autocomplete':
     default:
-      return `Continue the following text:\n\n${text}\n\nContinuation:`;
+      return `You are a helpful assistant.${contextBlock}${history}\n\nContinue the following text:\n\n${text}\n\nContinuation:`;
   }
 }
 
