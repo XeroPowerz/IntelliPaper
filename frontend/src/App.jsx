@@ -8,6 +8,7 @@ import { Decoration, DecorationSet } from 'prosemirror-view';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import Collaboration from '@tiptap/extension-collaboration';
+import { API_BASE_URL, WS_BASE_URL } from './apiConfig';
 
 const ghostKey = new PluginKey('ghost');
 
@@ -88,7 +89,7 @@ export default function App() {
   useEffect(() => {
     const fetchDoc = async () => {
       try {
-        const res = await axios.get('http://localhost:3001/api/document');
+        const res = await axios.get(`${API_BASE_URL}/api/document`);
         setInitialContent(res.data);
       } catch (e) {
         console.error(e);
@@ -99,7 +100,7 @@ export default function App() {
 
   useEffect(() => {
     axios
-      .get('http://localhost:3001/api/plugins')
+      .get(`${API_BASE_URL}/api/plugins`)
       .then(res => setPlugins(res.data))
       .catch(e => console.error(e));
   }, []);
@@ -110,11 +111,11 @@ export default function App() {
 
   useEffect(() => {
     providerRef.current = new WebsocketProvider(
-      'ws://localhost:3001',
+      WS_BASE_URL,
       'intellipaper',
       ydoc
     );
-    const review = new WebSocket('ws://localhost:3001/review');
+    const review = new WebSocket(`${WS_BASE_URL}/review`);
     reviewSocket.current = review;
     review.onmessage = event => {
       try {
@@ -181,7 +182,7 @@ export default function App() {
   const recalcLayout = async (overrides = {}) => {
     if (!editor) return;
     try {
-      const res = await axios.post('http://localhost:3001/api/layout', {
+      const res = await axios.post(`${API_BASE_URL}/api/layout`, {
         document: editor.getJSON(),
         overrides,
       });
@@ -227,14 +228,14 @@ export default function App() {
           const { from, to } = editor.state.selection;
           const text = editor.state.doc.textBetween(from, to, '\n');
           const res = await axios.post(
-            'http://localhost:3001/api/plugins/tutor/explain',
+            `${API_BASE_URL}/api/plugins/tutor/explain`,
             { text }
           );
           setTutorResult(res.data);
           setShowTutor(true);
           return;
         }
-        const res = await axios.post('http://localhost:3001/api/ai', {
+        const res = await axios.post(`${API_BASE_URL}/api/ai`, {
           documentText: editor.getText(),
           command: cmd,
         });
@@ -248,7 +249,7 @@ export default function App() {
       const text = editor.getText();
       clearGhost();
       axios
-        .post('http://localhost:3001/api/document', editor.getJSON())
+        .post(`${API_BASE_URL}/api/document`, editor.getJSON())
         .catch(err => console.error(err));
       // Recalculate layout hints based on the latest document structure
       recalcLayout();
@@ -256,7 +257,7 @@ export default function App() {
       timer.current = setTimeout(async () => {
         if (!text.trim()) return;
         try {
-          const res = await axios.post('http://localhost:3001/api/ai', {
+          const res = await axios.post(`${API_BASE_URL}/api/ai`, {
             documentText: text,
             command: 'autocomplete',
           });
@@ -346,7 +347,7 @@ export default function App() {
     const text = editor.state.doc.textBetween(from, to, '\n');
     try {
       const res = await axios.post(
-        `http://localhost:3001/api/plugins/${selectedPlugin}/${selectedAction}`,
+        `${API_BASE_URL}/api/plugins/${selectedPlugin}/${selectedAction}`,
         { text }
       );
       const result = res.data.result || '';
@@ -366,7 +367,7 @@ export default function App() {
     setMessages(prev => [...prev, userMessage, { role: 'assistant', content: '' }]);
     setChatInput('');
     try {
-      const res = await fetch('http://localhost:3001/api/commands', {
+      const res = await fetch(`${API_BASE_URL}/api/commands`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ instruction: userMessage.content, selectedText }),
@@ -414,9 +415,8 @@ export default function App() {
             {Array.from({ length: pageCount }).map((_, i) => (
               <div
                 key={i}
-                className={`pointer-events-none absolute left-0 right-0 mx-auto w-[816px] rounded-sm bg-white shadow-md ${
-                  ghost && i === pageCount - 1 ? 'ai-glow' : ''
-                }`}
+                className={`pointer-events-none absolute left-0 right-0 mx-auto w-[816px] rounded-sm bg-white shadow-md ${ghost && i === pageCount - 1 ? 'ai-glow' : ''
+                  }`}
                 style={{
                   top: i * (pageHeight + pageGap),
                   height: pageHeight,
@@ -437,9 +437,8 @@ export default function App() {
                   {slashCommands.map((cmd, i) => (
                     <div
                       key={cmd.value}
-                      className={`cursor-pointer px-4 py-2 text-sm ${
-                        i === slashIndex ? 'bg-gray-100' : ''
-                      }`}
+                      className={`cursor-pointer px-4 py-2 text-sm ${i === slashIndex ? 'bg-gray-100' : ''
+                        }`}
                     >
                       {cmd.label}
                     </div>
@@ -468,9 +467,8 @@ export default function App() {
               {messages.map((m, i) => (
                 <div
                   key={i}
-                  className={`mb-2 text-sm ${
-                    m.role === 'user' ? 'text-gray-800' : 'text-blue-600'
-                  }`}
+                  className={`mb-2 text-sm ${m.role === 'user' ? 'text-gray-800' : 'text-blue-600'
+                    }`}
                 >
                   {m.content}
                 </div>
