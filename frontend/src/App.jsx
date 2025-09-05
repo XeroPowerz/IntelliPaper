@@ -64,6 +64,7 @@ export default function App() {
   const [ghost, setGhost] = useState('');
   const ghostRef = useRef('');
   const timer = useRef(null);
+  const autocompleteController = useRef(null);
 
   const saveTimeout = useRef(null);
   const pendingSave = useRef(null);
@@ -282,18 +283,28 @@ export default function App() {
       // Recalculate layout hints based on the latest document structure
       recalcLayout();
       if (timer.current) clearTimeout(timer.current);
+      if (autocompleteController.current) {
+        autocompleteController.current.abort();
+      }
+      const controller = new AbortController();
+      autocompleteController.current = controller;
       timer.current = setTimeout(async () => {
         if (!text.trim()) return;
         try {
-          const res = await axios.post(`${API_BASE_URL}/api/ai`, {
-            documentText: text,
-            command: 'autocomplete',
-          });
+          const res = await axios.post(
+            `${API_BASE_URL}/api/ai`,
+            {
+              documentText: text,
+              command: 'autocomplete',
+            },
+            { signal: controller.signal }
+          );
           const suggestion = res.data.suggestion;
           setGhost(suggestion);
           ghostRef.current = suggestion;
           editor.commands.setGhost(suggestion);
         } catch (e) {
+          if (e.code === 'ERR_CANCELED') return;
           console.error(e);
         }
       }, 500);
