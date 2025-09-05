@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import axios from 'axios';
@@ -64,6 +64,36 @@ export default function App() {
   const [ghost, setGhost] = useState('');
   const ghostRef = useRef('');
   const timer = useRef(null);
+
+  const saveTimeout = useRef(null);
+  const pendingSave = useRef(null);
+
+  const debouncedSave = useCallback(content => {
+    pendingSave.current = content;
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(async () => {
+      try {
+        await axios.post(`${API_BASE_URL}/api/document`, pendingSave.current);
+        pendingSave.current = null;
+      } catch (err) {
+        console.error(err);
+      }
+    }, 500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeout.current) {
+        clearTimeout(saveTimeout.current);
+        if (pendingSave.current) {
+          axios
+            .post(`${API_BASE_URL}/api/document`, pendingSave.current)
+            .catch(err => console.error(err));
+          pendingSave.current = null;
+        }
+      }
+    };
+  }, []);
 
   const [showSlash, setShowSlash] = useState(false);
   const [slashIndex, setSlashIndex] = useState(0);
@@ -248,9 +278,7 @@ export default function App() {
     const updateHandler = ({ editor }) => {
       const text = editor.getText();
       clearGhost();
-      axios
-        .post(`${API_BASE_URL}/api/document`, editor.getJSON())
-        .catch(err => console.error(err));
+      debouncedSave(editor.getJSON());
       // Recalculate layout hints based on the latest document structure
       recalcLayout();
       if (timer.current) clearTimeout(timer.current);
