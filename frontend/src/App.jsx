@@ -99,6 +99,9 @@ export default function App() {
   const [pageCount, setPageCount] = useState(1);
   const editorContainerRef = useRef(null);
 
+  const [messages, setMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+
   // Recalculate page count whenever the editor size or page height changes
   useEffect(() => {
     if (!editorContainerRef.current) return;
@@ -261,6 +264,40 @@ export default function App() {
     };
   }, [editor, slashIndex, showSlash]);
 
+  const sendCommand = async () => {
+    if (!editor || !chatInput.trim()) return;
+    const { from, to } = editor.state.selection;
+    const selectedText = editor.state.doc.textBetween(from, to, '\n');
+    const userMessage = { role: 'user', content: chatInput };
+    setMessages(prev => [...prev, userMessage, { role: 'assistant', content: '' }]);
+    setChatInput('');
+    try {
+      const res = await fetch('http://localhost:3001/api/commands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instruction: userMessage.content, selectedText }),
+      });
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let aiText = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        aiText += decoder.decode(value);
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: 'assistant', content: aiText };
+          return updated;
+        });
+      }
+
+      editor.chain().focus().insertContentAt({ from, to }, aiText).run();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div className="flex h-screen flex-col bg-gray-50">
       <header className="flex items-center justify-between border-b bg-white px-6 py-3">
@@ -318,11 +355,33 @@ export default function App() {
             </div>
           </div>
         </div>
-        <aside className="hidden w-64 flex-shrink-0 border-l bg-white p-6 md:block">
-          <h2 className="mb-4 text-sm font-semibold text-gray-600">AI Insights</h2>
-          <p className="text-sm text-gray-500">
-            Deeper AI insights will appear here.
-          </p>
+        <aside className="hidden w-80 flex-shrink-0 border-l bg-white md:flex md:flex-col">
+          <div className="flex-1 overflow-y-auto p-4">
+            {messages.map((m, i) => (
+              <div
+                key={i}
+                className={`mb-2 text-sm ${
+                  m.role === 'user' ? 'text-gray-800' : 'text-blue-600'
+                }`}
+              >
+                {m.content}
+              </div>
+            ))}
+          </div>
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              sendCommand();
+            }}
+            className="border-t p-2"
+          >
+            <input
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              placeholder="Send a command..."
+              className="w-full rounded border px-2 py-1 text-sm"
+            />
+          </form>
         </aside>
       </div>
     </div>
