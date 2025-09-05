@@ -175,8 +175,8 @@ export default function App() {
           if (event.key === 'Enter') {
             const { from } = editor.state.selection;
             const start = Math.max(0, from - 50);
-            const textBefore = editor.state.doc.textBetween(start, from, '\\n');
-            const match = textBefore.match(/\\/(summarize|expand|rewrite)$/);
+            const textBefore = editor.state.doc.textBetween(start, from, '\n');
+            const match = textBefore.match(/\/(summarize|expand|rewrite)$/);
             if (match) {
               event.preventDefault();
               editor.commands.deleteRange({
@@ -217,9 +217,8 @@ export default function App() {
               {slashCommands.map((cmd, i) => (
                 <div
                   key={cmd.value}
-                  className={`cursor-pointer px-4 py-2 text-sm ${
-                    i === slashIndex ? 'bg-gray-100' : ''
-                  }`}
+                  className={`cursor-pointer px-4 py-2 text-sm ${i === slashIndex ? 'bg-gray-100' : ''
+                    }`}
                 >
                   {cmd.label}
                 </div>
