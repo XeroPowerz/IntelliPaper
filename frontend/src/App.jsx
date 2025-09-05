@@ -1,10 +1,13 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import axios from 'axios';
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+import Collaboration from '@tiptap/extension-collaboration';
 
 const ghostKey = new PluginKey('ghost');
 
@@ -65,6 +68,11 @@ export default function App() {
   const [slashIndex, setSlashIndex] = useState(0);
 
   const [initialContent, setInitialContent] = useState(null);
+  const ydoc = useMemo(() => new Y.Doc(), []);
+  const providerRef = useRef(null);
+  const reviewSocket = useRef(null);
+  const [changes, setChanges] = useState([]);
+  const [messages, setMessages] = useState([]);
 
   const slashCommands = [
     { label: 'Summarize', value: 'summarize' },
@@ -84,14 +92,57 @@ export default function App() {
     fetchDoc();
   }, []);
 
-  const editor = useEditor(
-    initialContent
-      ? {
-          extensions: [StarterKit, Ghost],
-          content: initialContent,
+  const editor = useEditor({
+    extensions: [StarterKit, Ghost, Collaboration.configure({ document: ydoc })],
+  });
+
+  useEffect(() => {
+    providerRef.current = new WebsocketProvider(
+      'ws://localhost:3001',
+      'intellipaper',
+      ydoc
+    );
+    const review = new WebSocket('ws://localhost:3001/review');
+    reviewSocket.current = review;
+    review.onmessage = event => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'review') {
+          setMessages(prev => [
+            ...prev,
+            { role: 'assistant', content: data.comment },
+          ]);
         }
-      : null
-  );
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    return () => {
+      providerRef.current.destroy();
+      review.close();
+    };
+  }, [ydoc]);
+
+  useEffect(() => {
+    if (initialContent && editor) {
+      editor.commands.setContent(initialContent);
+    }
+  }, [initialContent, editor]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const handler = () => {
+      setChanges(prev => [...prev, `Change ${prev.length + 1}`]);
+      try {
+        const text = editor.getText();
+        reviewSocket.current?.send(JSON.stringify({ text }));
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    ydoc.on('update', handler);
+    return () => ydoc.off('update', handler);
+  }, [editor, ydoc]);
 
   const [pageHeight, setPageHeight] = useState(1056); // ~11in @96dpi
   const [pageGap, setPageGap] = useState(32);
@@ -99,7 +150,6 @@ export default function App() {
   const [pageCount, setPageCount] = useState(1);
   const editorContainerRef = useRef(null);
 
-  const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
 
   // Recalculate page count whenever the editor size or page height changes
@@ -356,17 +406,28 @@ export default function App() {
           </div>
         </div>
         <aside className="hidden w-80 flex-shrink-0 border-l bg-white md:flex md:flex-col">
-          <div className="flex-1 overflow-y-auto p-4">
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                className={`mb-2 text-sm ${
-                  m.role === 'user' ? 'text-gray-800' : 'text-blue-600'
-                }`}
-              >
-                {m.content}
-              </div>
-            ))}
+          <div className="flex-1 overflow-y-auto">
+            <div className="border-b p-4">
+              <h2 className="mb-2 text-sm font-semibold">Tracked Changes</h2>
+              {changes.map((c, i) => (
+                <div key={i} className="mb-1 text-xs text-gray-700">
+                  {c}
+                </div>
+              ))}
+            </div>
+            <div className="p-4">
+              <h2 className="mb-2 text-sm font-semibold">AI Suggestions</h2>
+              {messages.map((m, i) => (
+                <div
+                  key={i}
+                  className={`mb-2 text-sm ${
+                    m.role === 'user' ? 'text-gray-800' : 'text-blue-600'
+                  }`}
+                >
+                  {m.content}
+                </div>
+              ))}
+            </div>
           </div>
           <form
             onSubmit={e => {
