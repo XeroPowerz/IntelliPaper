@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-bg text-text;
+  background: radial-gradient(1200px 800px at 20% -10%, #182033 0%, transparent 60%),
+    radial-gradient(1000px 700px at 120% 10%, #1d2438 0%, transparent 50%),
+    #0a0c12;
+}
+
+.btn {
+  @apply px-3 py-2 rounded-md border border-border bg-[#1a2033] text-text hover:border-[#2a3352] disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #3a6cff, #2a58e8);
+  border-color: #2a58e8;
+}
+
+.del {
+  background: rgba(255, 107, 107, 0.18);
+  text-decoration: line-through;
+}
+
+.ins {
+  background: rgba(75, 215, 163, 0.2);
+}
+
+.para {
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* Smooth overlay transitions */
+.overlay-enter {
+  opacity: 0;
+  transform: scale(1.01);
+}
+
+.overlay-enter-active {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.overlay-exit {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.overlay-exit-active {
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
