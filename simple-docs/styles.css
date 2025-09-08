@@ -1,0 +1,22 @@
+:root{
+  --bg:#0f1115;--panel:#131621;--border:#20263a;--text:#e6e8ee;--muted:#9aa3b2;--accent:#6aa3ff
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:radial-gradient(1200px 800px at 20% -10%, #182033 0%, transparent 60%),radial-gradient(1000px 700px at 120% 10%, #1d2438 0%, transparent 50%),var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+.toolbar{display:flex;align-items:center;gap:8px;padding:10px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
+.brand{font-weight:600}
+.divider{width:1px;height:22px;background:var(--border);margin:0 6px}
+.spacer{flex:1}
+button,select{color:var(--text);background:#1a2033;border:1px solid var(--border);border-radius:6px;padding:6px 10px;cursor:pointer}
+button:hover,select:hover{border-color:#2a3352}
+.editor-wrap{max-width:900px;margin:24px auto;padding:0 16px}
+.title{font-size:28px;font-weight:600;margin-bottom:12px;outline:none}
+.editor{min-height:60vh;line-height:1.7;font-size:18px;outline:none}
+[contenteditable][data-placeholder]:empty:before{content:attr(data-placeholder);color:var(--muted)}
+.editor h1{font-size:28px;margin:18px 0 8px}
+.editor h2{font-size:24px;margin:16px 0 8px}
+.editor h3{font-size:20px;margin:14px 0 8px}
+.editor p{margin:8px 0}
+.editor blockquote{border-left:3px solid var(--accent);margin:10px 0;padding:6px 10px;color:#cbd5ff;background:#0f1426}
+
