@@ -212,22 +212,23 @@ function setUIState(next, opts = {}) {
     return;
   }
 
-  // Always clean slate first
+  // Always clean slate first (do not instantly hide; allow animation)
   floatMenu.classList.remove('prompt-active');
   aiPrompt.hidden = true;
   aiPrompt.value = '';
-  floatMenu.hidden = true;
-  // Do not automatically hide preview here; hide per-state below
+  // Do not automatically hide preview/menu here; hide per-state below
   clearSelectionOverlay();
   menuPinned = false;
 
   if (next === UI.HIDDEN) {
     // Hide everything and optionally drop the range
-    closePreview();
+    hidePreviewAnimated?.();
+    // animate menu hide as well
+    hideMenuAnimated?.();
     if (!opts.keepRange) savedRange = null;
   }
   else if (next === UI.MENU) {
-    closePreview();
+    hidePreviewAnimated?.();
     const rect = selectionRect();
     if (!rect) { // nothing to show
       uiState = UI.HIDDEN;
@@ -235,7 +236,7 @@ function setUIState(next, opts = {}) {
       return;
     }
     positionMenu(rect);
-    floatMenu.hidden = false;
+    openMenuAnimated?.();
   }
   else if (next === UI.PROMPT) {
     // Ensure we have a range and anchor UI to it
@@ -245,7 +246,7 @@ function setUIState(next, opts = {}) {
       const r = rangeRect(savedRange); if (r) positionMenu(r);
     }
     floatMenu.classList.add('prompt-active');
-    floatMenu.hidden = false;
+    openMenuAnimated?.();
     aiPrompt.hidden = false;
     drawSelectionOverlay();
     // focus after DOM updates
@@ -258,6 +259,7 @@ function setUIState(next, opts = {}) {
     if (savedRange) {
       const r = rangeRect(savedRange); if (r) positionPreview(r);
     }
+    hideMenuAnimated?.();
   }
 
   uiState = next;
@@ -307,6 +309,9 @@ function positionMenu(rect) {
   floatMenu.style.top = topPx + 'px';
   floatMenu.style.left = leftPx + 'px';
   floatMenu.style.visibility = '';
+  // mark as opening for CSS transitions
+  floatMenu.classList.remove('is-leaving');
+  floatMenu.classList.add('is-open');
 }
 
 function showMenu() {
@@ -316,6 +321,45 @@ function showMenu() {
 }
 function hideMenu() {
   setUIState(UI.HIDDEN);
+}
+
+// Animated show/hide helpers for menu and preview
+function openMenuAnimated() {
+  floatMenu.hidden = false;
+  floatMenu.classList.remove('is-leaving');
+  requestAnimationFrame(() => floatMenu.classList.add('is-open'));
+}
+function hideMenuAnimated() {
+  if (floatMenu.hidden) return;
+  floatMenu.classList.remove('is-open');
+  floatMenu.classList.add('is-leaving');
+  const onEnd = (e) => {
+    if (e.propertyName === 'opacity' || e.propertyName === 'transform') {
+      floatMenu.hidden = true;
+      floatMenu.classList.remove('is-leaving');
+      floatMenu.removeEventListener('transitionend', onEnd);
+    }
+  };
+  floatMenu.addEventListener('transitionend', onEnd);
+  setTimeout(() => { if (!floatMenu.hidden) { floatMenu.hidden = true; floatMenu.classList.remove('is-leaving'); floatMenu.removeEventListener('transitionend', onEnd); } }, 260);
+}
+
+function openPreviewAnimated() {
+  aiPreview.hidden = false;
+  aiPreview.classList.remove('is-leaving');
+  requestAnimationFrame(() => aiPreview.classList.add('is-open'));
+}
+function hidePreviewAnimated() {
+  if (aiPreview.hidden) return;
+  aiPreview.classList.remove('is-open');
+  aiPreview.classList.add('is-leaving');
+  const onEnd = (e) => {
+    if (e.propertyName === 'opacity' || e.propertyName === 'transform') {
+      aiPreview.hidden = true; aiPreview.classList.remove('is-leaving'); aiPreview.removeEventListener('transitionend', onEnd);
+    }
+  };
+  aiPreview.addEventListener('transitionend', onEnd);
+  setTimeout(() => { if (!aiPreview.hidden) { aiPreview.hidden = true; aiPreview.classList.remove('is-leaving'); aiPreview.removeEventListener('transitionend', onEnd); } }, 280);
 }
 
 document.addEventListener('selectionchange', () => {
@@ -471,7 +515,8 @@ async function streamAI(ep, payload) {
   const rect = savedRange ? savedRange.getBoundingClientRect ? savedRange.getBoundingClientRect() : selectionRect() : selectionRect();
   if (!rect) throw new Error('no selection');
   positionPreview(rect);
-  aiPreview.hidden = false; aiStream.textContent = '';
+  aiStream.textContent = '';
+  openPreviewAnimated();
   lastResult = '';
   const res = await fetch(ep, { method: 'POST', headers: { 'Accept': 'text/event-stream', 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   if (!res.ok) throw new Error('stream failed');
@@ -529,12 +574,11 @@ function positionPreview(rect) {
 function showPreview(text) {
   const rect = selectionRect(); if (!rect) return;
   positionPreview(rect);
-  aiStream.textContent = text; aiPreview.hidden = false;
+  aiStream.textContent = text; openPreviewAnimated();
 }
 
-aiAcceptBtn.addEventListener('click', () => { if (lastResult) replaceSelection(lastResult); closePreview(); menuPinned = false; hideMenu(); });
-aiKeepBtn.addEventListener('click', () => { closePreview(); menuPinned = false; hideMenu(); });
-function closePreview() { aiPreview.hidden = true; lastResult = ''; }
+aiAcceptBtn.addEventListener('click', () => { if (lastResult) replaceSelection(lastResult); hidePreviewAnimated(); lastResult = ''; menuPinned = false; hideMenu(); });
+aiKeepBtn.addEventListener('click', () => { hidePreviewAnimated(); lastResult = ''; menuPinned = false; hideMenu(); });
 
 // Hide menu when clicking outside or on scroll/resize if selection disappears
 document.addEventListener('mousedown', (e) => {
